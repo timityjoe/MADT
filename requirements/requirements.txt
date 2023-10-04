@@ -19,3 +19,5 @@ jaxlib
 dm-haiku
 
 tensorflow_datasets
+matplotlib
+loguru
