@@ -9,3 +9,7 @@ pip install -r requirements.txt -t ./pipenv
 conda deactivate
 conda clean --all	# Purge cache and unused apps
 condo info
+
+source madt.sh
+
+python3 -m main
