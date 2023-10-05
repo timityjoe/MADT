@@ -56,7 +56,12 @@ from loguru import logger
 from env_wrappers import build_env_fn, _batch_rollout
 from madt_model_functions import optimal_action
 
-# @title Load model checkpoint
+# @title Load model checkpoint - Moved to madt_model_functions.py
+# See 
+# https://offline-rl.github.io/
+# Follow steps for gsutil installation, then
+#       gsutil -m cp -R gs://atari-replay-datasets/dqn ./
+#       gsutil -m cp -R gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl ./
 # file_path = 'gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl'
 # print('loading checkpoint from:', file_path)
 # with tf.io.gfile.GFile(file_path, 'rb') as f:

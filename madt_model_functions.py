@@ -10,23 +10,41 @@ import scipy.linalg
 import functools
 import os
 import pickle
+import tensorflow.compat.v2 as tf
 
 from madt_atari_env import ATARI_NUM_ACTIONS, ATARI_NUM_REWARDS, ATARI_RETURN_RANGE
 from madt_transformer import Transformer
-from madt_utilities import image_embedding, encode_return, encode_reward, add_position_embedding, cross_entropy, accuracy
+from madt_utilities import image_embedding, encode_return, encode_reward, add_position_embedding, cross_entropy, accuracy, sample_from_logits, decode_return
 
 # ---------------------------------------------
-model_state = "model_state"
-# print(f"model_checkpoint:{model_checkpoint}")
-path = os.getcwd()
-print("PWD:", path)
+# From Jumanji
+# model_state = "model_state"
+# # print(f"model_checkpoint:{model_checkpoint}")
+# path = os.getcwd()
+# print("PWD:", path)
 
-with open(model_state, "rb") as f:
-    model_state = pickle.load(f)
+# with open(model_state, "rb") as f:
+#     model_state = pickle.load(f)
 
-model_params = first_from_device(model_state.params_state.params)
+# model_params = first_from_device(model_state.params_state.params)
 # ---------------------------------------------
 
+# ---------------------------------------------
+# @title Load model checkpoint
+# See 
+# https://offline-rl.github.io/
+# Follow steps for gsutil installation, then
+#       gsutil -m cp -R gs://atari-replay-datasets/dqn ./
+#       gsutil -m cp -R gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl ./
+# file_path = 'gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl'
+file_path = './checkpoint_38274228.pkl'
+print('loading checkpoint from:', file_path)
+with tf.io.gfile.GFile(file_path, 'rb') as f:
+  model_params, model_state = pickle.load(f)
+
+model_param_count = sum(x.size for x in jax.tree_util.tree_leaves(model_params))
+print('Number of model parameters: %.2e' % model_param_count)
+# ---------------------------------------------
 
 class DecisionTransformer(hk.Module):
   """Decision transformer module."""

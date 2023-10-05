@@ -6,6 +6,7 @@ from madt_atari_env import AtariEnvWrapper
 import collections
 from jax import tree_util
 
+from loguru import logger
 
 
 class WrappedGymEnv:
