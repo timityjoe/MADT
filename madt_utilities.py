@@ -6,8 +6,16 @@ import jax
 import jax.numpy as jnp
 import haiku as hk
 
+import sys
+from loguru import logger
+logger.remove()
+logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 
 def cross_entropy(logits, labels):
+  logger.debug("cross_entropy()")
   """Applies sparse cross entropy loss between logits and target labels."""
   labels = jax.nn.one_hot(labels, logits.shape[-1], dtype=logits.dtype)
   loss = -labels * jax.nn.log_softmax(logits)
@@ -15,6 +23,7 @@ def cross_entropy(logits, labels):
 
 
 def accuracy(logits, labels):
+  logger.debug("cross_entropy()")
   """Applies sparse cross entropy loss between logits and target labels."""
   predicted_label = jnp.argmax(logits, axis=-1)
   acc = jnp.equal(predicted_label, labels).astype(jnp.float32)
@@ -22,6 +31,7 @@ def accuracy(logits, labels):
 
 
 def add_position_embedding(tokens: jnp.array) -> jnp.array:
+  logger.debug("add_position_embedding()")
   """Add position embedding to a token sequence."""
   assert len(tokens.shape) == 3
   seq_length = tokens.shape[1]
@@ -39,6 +49,7 @@ def image_embedding(
     output_conv_channels: Optional[int] = 128,
     patch_size: Optional[Tuple[int, int]] = (14, 14),
 ):
+  logger.debug("image_embedding()")
   """Embed [B x T x W x H x C] images to tokens [B x T x output_dim] tokens.
 
   Args:
@@ -89,6 +100,7 @@ def sample_from_logits(
     temperature: Optional[float] = 1e+0,
     top_k: Optional[int] = None,
     top_percentile: Optional[float] = None) -> Tuple[jnp.ndarray, jnp.ndarray]:
+  logger.debug("sample_from_logits()")
   """Generate a categorical sample from given logits."""
   if deterministic:
     sample = jnp.argmax(logits, axis=-1)
@@ -125,6 +137,7 @@ def autoregressive_generate(
     sample_fn: Union[Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray],
                      None] = None
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+  logger.debug("autoregressive_generate()")
   """Autoregressively generate an input field given a logit function."""
   val = jnp.zeros_like(inputs[name])
 
@@ -150,6 +163,7 @@ def autoregressive_generate(
 
 
 def make_return(rew: jnp.ndarray):
+  logger.debug("make_return()")
   """Maximize scoring rewards (rew=1) while not terminating (rew=2)."""
   pos_ret = jnp.sum(rew == 1, axis=-1)
   neg_ret = jnp.sum(rew == 3, axis=-1)
@@ -158,6 +172,7 @@ def make_return(rew: jnp.ndarray):
 
 
 def encode_reward(rew: jnp.ndarray) -> jnp.ndarray:
+  logger.debug("encode_reward()")
   """Encode reward values into values expected by the model."""
   # 0: no reward   1: positive reward   2: terminal reward   3: negative reward
   rew = (rew > 0) * 1 + (rew < 0) * 3
@@ -165,6 +180,7 @@ def encode_reward(rew: jnp.ndarray) -> jnp.ndarray:
 
 
 def encode_return(ret: jnp.ndarray, ret_range: Tuple[int]) -> jnp.ndarray:
+  logger.debug("encode_return()")
   """Encode (possibly negative) return values into discrete return tokens."""
   ret = ret.astype(jnp.int32)
   ret = jnp.clip(ret, ret_range[0], ret_range[1])
@@ -173,6 +189,7 @@ def encode_return(ret: jnp.ndarray, ret_range: Tuple[int]) -> jnp.ndarray:
 
 
 def decode_return(ret: jnp.ndarray, ret_range: Tuple[int]) -> jnp.ndarray:
+  logger.debug("decode_return()")
   """Decode discrete return tokens into return values."""
   ret = ret.astype(jnp.int32)
   ret = ret + ret_range[0]

@@ -84,8 +84,8 @@ if __name__ == "__main__":
 
     rng = jax.random.PRNGKey(0)
     # NOTE: the evaluation num_steps is shorter than what is used for paper experiments for speed.
-    rew_sum, frames, rng = _batch_rollout(
-        rng, env_batch, optimal_action, num_steps=5000, log_interval=100)
+    #rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5000, log_interval=100)
+    rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5, log_interval=1)
 
     print('scores:', rew_sum, 'average score:', np.mean(rew_sum))
 
@@ -93,10 +93,12 @@ if __name__ == "__main__":
 
     # @title Plot scores
 
+    # plt.ion()
     plt.plot(rew_sum, 'o')
     plt.title(f'Game scores for {game_name}')
     plt.xlabel('trial index')
     plt.ylabel('score')
+    plt.show()
 
     logger.info("Main() End")
      

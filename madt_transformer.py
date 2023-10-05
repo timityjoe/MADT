@@ -6,6 +6,14 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 
+from tqdm import tqdm
+
+import sys
+from loguru import logger
+logger.remove()
+logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
 class DenseBlock(hk.Module):
   """A 2-layer MLP which widens then narrows the input."""
@@ -14,11 +22,13 @@ class DenseBlock(hk.Module):
                init_scale: float,
                widening_factor: int = 4,
                name: Optional[str] = None):
+    logger.debug("__init__()")
     super().__init__(name=name)
     self._init_scale = init_scale
     self._widening_factor = widening_factor
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
+    logger.debug("__call__()")
     hiddens = x.shape[-1]
     initializer = hk.initializers.VarianceScaling(self._init_scale)
     x = hk.Linear(self._widening_factor * hiddens, w_init=initializer)(x)
@@ -27,6 +37,7 @@ class DenseBlock(hk.Module):
 
 
 def layer_norm(x: jnp.ndarray, name: Optional[str] = None) -> jnp.ndarray:
+  logger.debug("layer_norm()")
   """Apply a unique LayerNorm to x with default settings."""
   return hk.LayerNorm(
       axis=-1, create_scale=True, create_offset=True, name=name)(
@@ -45,6 +56,7 @@ class CausalSelfAttention(hk.MultiHeadAttention):
       custom_causal_mask: Optional[jnp.ndarray] = None,
       prefix_length: Optional[int] = 0,
   ) -> jnp.ndarray:
+    logger.debug("__call__()")
     key = key if key is not None else query
     value = value if value is not None else query
 
@@ -74,6 +86,7 @@ class Transformer(hk.Module):
                num_layers: int,
                dropout_rate: float,
                name: Optional[str] = None):
+    logger.info("__init__()")
     super().__init__(name=name)
     self._num_layers = num_layers
     self._num_heads = num_heads
@@ -97,7 +110,7 @@ class Transformer(hk.Module):
     Returns:
       Array of shape [B, T, D].
     """
-
+    logger.info("__call__()")
     init_scale = 2. / self._num_layers
     dropout_rate = self._dropout_rate if is_training else 0.
     if mask is not None:
@@ -107,6 +120,7 @@ class Transformer(hk.Module):
 
     # Note: names chosen to approximately match those used in the GPT-2 code;
     # see https://github.com/openai/gpt-2/blob/master/src/model.py.
+    # for i in tqdm(range(self._num_layers)):
     for i in range(self._num_layers):
       h_norm = layer_norm(h, name=f'h{i}_ln_1')
       h_attn = CausalSelfAttention(
