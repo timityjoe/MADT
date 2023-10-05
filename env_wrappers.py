@@ -6,6 +6,14 @@ from madt_atari_env import AtariEnvWrapper
 import collections
 from jax import tree_util
 
+import sys
+from loguru import logger
+logger.remove()
+logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
+from tqdm import tqdm
 
 
 class WrappedGymEnv:
@@ -23,6 +31,8 @@ class SequenceEnvironmentWrapper(WrappedGymEnv):
   def __init__(self,
                env,
                num_stack_frames: int = 1):
+    logger.info("init()")
+
     self._env = env
     self.num_stack_frames = num_stack_frames
     if self.is_goal_conditioned:
@@ -36,6 +46,7 @@ class SequenceEnvironmentWrapper(WrappedGymEnv):
 
   @property
   def observation_space(self):
+    logger.debug("observation_space()")
     """Constructs observation space."""
     parent_obs_space = self._env.observation_space
     act_space = self.action_space
@@ -154,6 +165,7 @@ class SequenceEnvironmentWrapper(WrappedGymEnv):
       window_return -= r
 
 def build_env_fn(game_name):
+  logger.info("build_env_fn()")
   """Returns env constructor fn."""
 
   def env_fn():
@@ -169,6 +181,7 @@ def build_env_fn(game_name):
 
 # You can add your own logic and any other collection code here.
 def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
+  logger.info("_batch_rollout()")
   """Roll out a batch of environments under a given policy function."""
   # observations are dictionaries. Merge into single dictionary with batched
   # observations.
@@ -179,7 +192,7 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
   done = np.zeros(num_batch, dtype=np.int32)
   rew_sum = np.zeros(num_batch, dtype=np.float32)
   frames = []
-  for t in range(num_steps):
+  for t in tqdm(range(num_steps)):
     # Collect observations
     frames.append(
         np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=1))
@@ -201,5 +214,6 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
       print('step: %d done: %s reward: %s' % (t, done, rew_sum))
     # Don't continue if all environments are done.
     if np.all(done):
+      logger.info("np.all(done)..!")
       break
   return rew_sum, frames, rng

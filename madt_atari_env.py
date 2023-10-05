@@ -7,6 +7,8 @@ import gym
 from dopamine.discrete_domains import atari_lib
 import tensorflow.compat.v2 as tf
 
+from loguru import logger
+
 GAME_NAMES = [
     'AirRaid', 'Alien', 'Amidar', 'Assault', 'Asterix', 'Asteroids', 'Atlantis',
     'BankHeist', 'BattleZone', 'BeamRider', 'Berzerk', 'Bowling', 'Boxing',
@@ -291,6 +293,7 @@ FULL_ACTION_TO_LIMITED_ACTION = {
 
 
 def _process_observation(obs):
+  logger.debug("_process_observation()")
   """Process observation."""
   # Apply jpeg auto-encoding to better match observations in the dataset.
   return tf.io.decode_jpeg(tf.io.encode_jpeg(obs)).numpy()
@@ -300,6 +303,7 @@ class AtariEnvWrapper():
   """Environment wrapper with a unified API."""
 
   def __init__(self, game_name: str, full_action_set: Optional[bool] = True):
+    logger.debug("__init__()")
     # Disable randomized sticky actions to reduce variance in evaluation.
     self._env = atari_lib.create_atari_environment(
         game_name, sticky_actions=False)

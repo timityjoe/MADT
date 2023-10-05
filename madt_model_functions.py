@@ -10,23 +10,48 @@ import scipy.linalg
 import functools
 import os
 import pickle
+import tensorflow.compat.v2 as tf
+
+import sys
+from loguru import logger
+logger.remove()
+logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
 from madt_atari_env import ATARI_NUM_ACTIONS, ATARI_NUM_REWARDS, ATARI_RETURN_RANGE
 from madt_transformer import Transformer
-from madt_utilities import image_embedding, encode_return, encode_reward, add_position_embedding, cross_entropy, accuracy
+from madt_utilities import image_embedding, encode_return, encode_reward, add_position_embedding, cross_entropy, accuracy, sample_from_logits, decode_return
 
 # ---------------------------------------------
-model_state = "model_state"
-# print(f"model_checkpoint:{model_checkpoint}")
-path = os.getcwd()
-print("PWD:", path)
+# From Jumanji
+# model_state = "model_state"
+# # print(f"model_checkpoint:{model_checkpoint}")
+# path = os.getcwd()
+# print("PWD:", path)
 
-with open(model_state, "rb") as f:
-    model_state = pickle.load(f)
+# with open(model_state, "rb") as f:
+#     model_state = pickle.load(f)
 
-model_params = first_from_device(model_state.params_state.params)
+# model_params = first_from_device(model_state.params_state.params)
 # ---------------------------------------------
 
+# ---------------------------------------------
+# @title Load model checkpoint
+# See 
+# https://offline-rl.github.io/
+# Follow steps for gsutil installation, then
+#       gsutil -m cp -R gs://atari-replay-datasets/dqn ./
+#       gsutil -m cp -R gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl ./
+# file_path = 'gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl'
+file_path = './checkpoint_38274228.pkl'
+print('loading checkpoint from:', file_path)
+with tf.io.gfile.GFile(file_path, 'rb') as f:
+  model_params, model_state = pickle.load(f)
+
+model_param_count = sum(x.size for x in jax.tree_util.tree_leaves(model_params))
+print('Number of model parameters: %.2e' % model_param_count)
+# ---------------------------------------------
 
 class DecisionTransformer(hk.Module):
   """Decision transformer module."""
@@ -43,6 +68,8 @@ class DecisionTransformer(hk.Module):
                conv_dim: int,
                name: Optional[Text] = None):
     super().__init__(name=name)
+
+    logger.info("__init__()")
 
     # Expected by the transformer model.
     if d_model % 64 != 0:
@@ -69,6 +96,8 @@ class DecisionTransformer(hk.Module):
       is_training: bool) -> Tuple[jnp.array, jnp.array, jnp.array, jnp.array]:
     # Embed only prefix_frames first observations.
     # obs are [B x T x W x H x C].
+
+    logger.info("_embed_inputs()")
     obs_emb = image_embedding(
         obs,
         self.d_model,
@@ -92,6 +121,7 @@ class DecisionTransformer(hk.Module):
 
   def __call__(self, inputs: Mapping[str, jnp.array],
                is_training: bool) -> Mapping[str, jnp.array]:
+    logger.info("__call__()")
     """Process sequence."""
     num_batch = inputs['actions'].shape[0]
     num_steps = inputs['actions'].shape[1]
@@ -196,6 +226,7 @@ class DecisionTransformer(hk.Module):
 
   def _objective_pairs(self, inputs: Mapping[str, jnp.ndarray],
                        model_outputs: Mapping[str, jnp.ndarray]) -> jnp.ndarray:
+    logger.info("_objective_pairs()")
     """Get logit-target pairs for the model objective terms."""
     act_target = inputs['actions']
     ret_target = encode_return(inputs['returns-to-go'], self.return_range)
@@ -213,6 +244,7 @@ class DecisionTransformer(hk.Module):
 
   def sequence_loss(self, inputs: Mapping[str, jnp.ndarray],
                     model_outputs: Mapping[str, jnp.ndarray]) -> jnp.ndarray:
+    logger.info("sequence_loss()")
     """Compute the loss on data wrt model outputs."""
     obj_pairs = self._objective_pairs(inputs, model_outputs)
     obj = [cross_entropy(logits, target) for logits, target in obj_pairs]
@@ -221,6 +253,7 @@ class DecisionTransformer(hk.Module):
   def sequence_accuracy(
       self, inputs: Mapping[str, jnp.ndarray],
       model_outputs: Mapping[str, jnp.ndarray]) -> jnp.ndarray:
+    logger.info("sequence_accuracy()")
     """Compute the accuracy on data wrt model outputs."""
     obj_pairs = self._objective_pairs(inputs, model_outputs)
     obj = [accuracy(logits, target) for logits, target in obj_pairs]
@@ -238,6 +271,7 @@ class DecisionTransformer(hk.Module):
                      return_temperature: Optional[float] = 1.0,
                      action_top_percentile: Optional[float] = None,
                      return_top_percentile: Optional[float] = None):
+    logger.info("optimal_action()")
     """Calculate optimal action for the given sequence model."""
     obs, act, rew = inputs['observations'], inputs['actions'], inputs['rewards']
     assert len(obs.shape) == 5
@@ -307,6 +341,7 @@ class DecisionTransformer(hk.Module):
 from madt_atari_env import ATARI_OBSERVATION_SHAPE
 
 def model_fn(datapoint, is_training=False):
+  logger.info("model_fn()")
   model = DecisionTransformer(num_actions = ATARI_NUM_ACTIONS,
                num_rewards = ATARI_NUM_REWARDS,
                return_range = ATARI_RETURN_RANGE,
@@ -322,6 +357,7 @@ model_fn = hk.transform_with_state(model_fn)
 
 @jax.jit
 def optimal_action(rng, inputs):
+  logger.info("optimal_action()")
   logits_fn = lambda rng, inputs: model_fn.apply(
         model_params, model_state, rng, inputs, is_training=False)[0]
 
@@ -341,7 +377,7 @@ def optimal_action(rng, inputs):
      
 
 # @title Test model function
-
+logger.info("Test model function... ")
 rng = jax.random.PRNGKey(0)
 
 batch_size = 2
