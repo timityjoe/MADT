@@ -64,10 +64,11 @@ if __name__ == "__main__":
     # print(envs.registry.all())
 
     # Select the first game from evaluation config. Feel free to change.
-    game_name = 'Breakout'  # @param
+    # game_name = 'Breakout'  # @param
+    game_name = 'Asterix'
     # game_name = 'UpNDown-ram-v0' 
     # game_name = 'ALE/Blackjack-v5'
-    game_name = 'ALE/Asterix-ram-v5'
+    # game_name = 'ALE/Asterix-ram-v5'
     # game_name = 'ALE/Asterix-v5'
     # num_envs = 16  # @param
     num_envs = 1  # @param

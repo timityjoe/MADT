@@ -271,9 +271,13 @@ class DecisionTransformer(hk.Module):
                      return_temperature: Optional[float] = 1.0,
                      action_top_percentile: Optional[float] = None,
                      return_top_percentile: Optional[float] = None):
-    logger.debug("optimal_action()")
     """Calculate optimal action for the given sequence model."""
     obs, act, rew = inputs['observations'], inputs['actions'], inputs['rewards']
+
+    logger.info("optimal_action()")
+    logger.info(f"len(obs.shape): {len(obs.shape)}")
+    logger.info(f"len(act.shape): {len(act.shape)}")
+
     assert len(obs.shape) == 5
     assert len(act.shape) == 2
     inputs = {

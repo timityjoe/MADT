@@ -6,9 +6,10 @@ import numpy as np
 import gym
 import tensorflow.compat.v2 as tf
 
-# from dopamine.discrete_domains import atari_lib
-import gym
-from gym import envs
+from dopamine.discrete_domains import atari_lib
+# import gym
+# from gym import envs
+
 
 from loguru import logger
 
@@ -296,26 +297,40 @@ FULL_ACTION_TO_LIMITED_ACTION = {
 
 
 def _process_observation(obs):
-  logger.debug("_process_observation()")
+  logger.info("_process_observation")
+#   logger.info(np.size(obs))
+#   logger.info(obs)
   """Process observation."""
   # Apply jpeg auto-encoding to better match observations in the dataset.
   return tf.io.decode_jpeg(tf.io.encode_jpeg(obs)).numpy()
 
 
-class GymEnvWrapper(gym.Env):
+from .atari_plotter import AtariPlotter
+
+# class GymEnvWrapper(gym.Env):
+class GymEnvWrapper():
   """Environment wrapper with a unified API."""
 
   def __init__(self, game_name: str, full_action_set: Optional[bool] = True):
     logger.debug("__init__()")
     # Disable randomized sticky actions to reduce variance in evaluation.
-    # self._env = atari_lib.create_atari_environment(game_name, sticky_actions=False)
-    self._env = gym.make(game_name, render_mode="human")
-
-    # print(envs.registry.all())
-    print("gym.spec:", gym.spec(game_name))
-
+    self._env = atari_lib.create_atari_environment(game_name, sticky_actions=False)
     self.game_name = game_name
+
+    # self._env = gym.make(game_name, render_mode="human")
+    # env = env.env
+    # env = AtariPreprocessing(env)
+
+    # Check available environments
+    # print(envs.registry.all())
+    # logger.info(f"gym.spec: {gym.spec(game_name)}")
+    # self.game_name = game_name
+
     self.full_action_set = full_action_set
+    parameter_dict = {'x': 0, 'y': 0, 'environment':game_name}
+    logger.info(parameter_dict)
+    self._atariPlotter = AtariPlotter(parameter_dict)
+    self._obs = None
 
   @property
   def observation_space(self) -> gym.Space:
@@ -328,20 +343,26 @@ class GymEnvWrapper(gym.Env):
     return self._env.action_space
 
   def reset(self) -> np.ndarray:
+    logger.info("reset")
     """Reset environment and return observation."""
     return _process_observation(self._env.reset())
+    # return self._env.reset()
 
   def step(self, action: int) -> Tuple[np.ndarray, float, bool, Any]:
+    logger.info("step")
     """Step environment and return observation, reward, done, info."""
     if self.full_action_set:
       # atari_py library expects limited action set, so convert to limited.
       action = FULL_ACTION_TO_LIMITED_ACTION[self.game_name][action]
     obs, rew, done, info = self._env.step(action)
     obs = _process_observation(obs)
+    self._obs = obs
     return obs, rew, done, info
      
   def render(self):
     """ Render the game"""
     logger.info("render")
-    return self._env.render()
+    # return self._env.render(mode='human')
+    self._atariPlotter.draw(self._obs)
+    return
 

@@ -201,12 +201,14 @@ def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_inte
     # Collect observations
     frames.append(
         np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=1))
+        # np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=0))
     done_prev = done
 
     actions, rng = policy_fn(rng, obs)
 
     # Collect step results and stack as a batch.
-    time.sleep(100)
+    time.sleep(1) # Sleep 1 second
+
     [env.render() for env in envs]
     step_results = [env.step(act) for env, act in zip(envs, actions)]
     obs_list = [result[0] for result in step_results]

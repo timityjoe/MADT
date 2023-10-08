@@ -183,7 +183,7 @@ def build_env_fn(game_name):
 
 # You can add your own logic and any other collection code here.
 def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
-  logger.info("_batch_rollout()")
+  logger.info("_batch_rollout_atari()")
 
   
   """Roll out a batch of environments under a given policy function."""
