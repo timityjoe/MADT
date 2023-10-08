@@ -2,9 +2,11 @@
 
 # @title Create environment wrappers
 import numpy as np
-from madt_atari_env import AtariEnvWrapper
+from Gymnasium.madt_gymnasium_env import GymEnvWrapper
 import collections
 from jax import tree_util
+
+import matplotlib.pyplot as plt
 
 import sys
 from loguru import logger
@@ -169,7 +171,7 @@ def build_env_fn(game_name):
   """Returns env constructor fn."""
 
   def env_fn():
-    env = AtariEnvWrapper(game_name)
+    env = GymEnvWrapper(game_name)
     env = SequenceEnvironmentWrapper(env, 4)
     return env
 
@@ -180,11 +182,13 @@ def build_env_fn(game_name):
 
 
 # You can add your own logic and any other collection code here.
-def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
-  logger.info("_batch_rollout()")
+import time
+def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_interval=None):
+  logger.info("_batch_rollout_gym()")
+
+  
   """Roll out a batch of environments under a given policy function."""
-  # observations are dictionaries. Merge into single dictionary with batched
-  # observations.
+  # observations are dictionaries. Merge into single dictionary with batched observations.
   obs_list = [env.reset() for env in envs]
   num_batch = len(envs)
   obs = tree_util.tree_map(lambda *arr: np.stack(arr, axis=0), *obs_list)
@@ -193,6 +197,7 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
   rew_sum = np.zeros(num_batch, dtype=np.float32)
   frames = []
   for t in tqdm(range(num_steps)):
+
     # Collect observations
     frames.append(
         np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=1))
@@ -201,6 +206,8 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
     actions, rng = policy_fn(rng, obs)
 
     # Collect step results and stack as a batch.
+    time.sleep(100)
+    [env.render() for env in envs]
     step_results = [env.step(act) for env, act in zip(envs, actions)]
     obs_list = [result[0] for result in step_results]
     obs = tree_util.tree_map(lambda *arr: np.stack(arr, axis=0), *obs_list)
@@ -210,8 +217,10 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
     done = np.logical_or(done, done_prev).astype(np.int32)
     rew = rew * (1 - done)
     rew_sum += rew
+
     if log_interval and t % log_interval == 0:
       print('step: %d done: %s reward: %s' % (t, done, rew_sum))
+
     # Don't continue if all environments are done.
     if np.all(done):
       logger.info("np.all(done)..!")

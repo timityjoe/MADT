@@ -4,8 +4,11 @@
 from typing import Any, Callable, Mapping, Optional, Text, Tuple, Union
 import numpy as np
 import gym
-from dopamine.discrete_domains import atari_lib
 import tensorflow.compat.v2 as tf
+
+# from dopamine.discrete_domains import atari_lib
+import gym
+from gym import envs
 
 from loguru import logger
 
@@ -299,14 +302,18 @@ def _process_observation(obs):
   return tf.io.decode_jpeg(tf.io.encode_jpeg(obs)).numpy()
 
 
-class AtariEnvWrapper():
+class GymEnvWrapper(gym.Env):
   """Environment wrapper with a unified API."""
 
   def __init__(self, game_name: str, full_action_set: Optional[bool] = True):
     logger.debug("__init__()")
     # Disable randomized sticky actions to reduce variance in evaluation.
-    self._env = atari_lib.create_atari_environment(
-        game_name, sticky_actions=False)
+    # self._env = atari_lib.create_atari_environment(game_name, sticky_actions=False)
+    self._env = gym.make(game_name, render_mode="human")
+
+    # print(envs.registry.all())
+    print("gym.spec:", gym.spec(game_name))
+
     self.game_name = game_name
     self.full_action_set = full_action_set
 
@@ -333,4 +340,8 @@ class AtariEnvWrapper():
     obs = _process_observation(obs)
     return obs, rew, done, info
      
+  def render(self):
+    """ Render the game"""
+    logger.info("render")
+    return self._env.render()
 
