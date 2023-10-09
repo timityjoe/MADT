@@ -2,9 +2,11 @@
 
 # @title Create environment wrappers
 import numpy as np
-from madt_atari_env import AtariEnvWrapper
+from ALE.madt_atari_env import AtariEnvWrapper
 import collections
 from jax import tree_util
+
+import matplotlib.pyplot as plt
 
 import sys
 from loguru import logger
@@ -181,7 +183,9 @@ def build_env_fn(game_name):
 
 # You can add your own logic and any other collection code here.
 def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
-  logger.info("_batch_rollout()")
+  logger.info("_batch_rollout_atari()")
+
+  
   """Roll out a batch of environments under a given policy function."""
   # observations are dictionaries. Merge into single dictionary with batched
   # observations.
@@ -193,6 +197,7 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
   rew_sum = np.zeros(num_batch, dtype=np.float32)
   frames = []
   for t in tqdm(range(num_steps)):
+
     # Collect observations
     frames.append(
         np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=1))
@@ -210,8 +215,10 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
     done = np.logical_or(done, done_prev).astype(np.int32)
     rew = rew * (1 - done)
     rew_sum += rew
+
     if log_interval and t % log_interval == 0:
       print('step: %d done: %s reward: %s' % (t, done, rew_sum))
+
     # Don't continue if all environments are done.
     if np.all(done):
       logger.info("np.all(done)..!")

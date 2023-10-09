@@ -53,7 +53,7 @@ import haiku as hk
 import optax
 
 from loguru import logger
-from env_wrappers import build_env_fn, _batch_rollout
+from ALE.env_wrappers import build_env_fn, _batch_rollout
 from madt_model_functions import optimal_action
 
 # @title Load model checkpoint - Moved to madt_model_functions.py
@@ -76,15 +76,17 @@ if __name__ == "__main__":
     logger.info("Main() - Start")
 
     # Select the first game from evaluation config. Feel free to change.
-    game_name = 'Breakout'  # @param
-    num_envs = 16  # @param
+    # game_name = 'Breakout'  # @param
+    game_name = 'Asterix'
+    # num_envs = 16  # @param
+    num_envs = 1  # @param
     env_fn = build_env_fn(game_name)
     # Create a batch of environments to evaluate.
     env_batch = [env_fn() for i in range(num_envs)]
 
     rng = jax.random.PRNGKey(0)
     # NOTE: the evaluation num_steps is shorter than what is used for paper experiments for speed.
-    #rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5000, log_interval=100)
+    # rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5000, log_interval=10)
     rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5, log_interval=1)
 
     print('scores:', rew_sum, 'average score:', np.mean(rew_sum))
@@ -93,7 +95,7 @@ if __name__ == "__main__":
 
     # @title Plot scores
 
-    # plt.ion()
+    ## plt.ion()
     plt.plot(rew_sum, 'o')
     plt.title(f'Game scores for {game_name}')
     plt.xlabel('trial index')

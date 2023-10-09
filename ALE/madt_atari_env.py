@@ -293,7 +293,8 @@ FULL_ACTION_TO_LIMITED_ACTION = {
 
 
 def _process_observation(obs):
-  logger.debug("_process_observation()")
+  logger.info(np.size(obs))
+  logger.info(obs)
   """Process observation."""
   # Apply jpeg auto-encoding to better match observations in the dataset.
   return tf.io.decode_jpeg(tf.io.encode_jpeg(obs)).numpy()
@@ -305,9 +306,12 @@ class AtariEnvWrapper():
   def __init__(self, game_name: str, full_action_set: Optional[bool] = True):
     logger.debug("__init__()")
     # Disable randomized sticky actions to reduce variance in evaluation.
-    self._env = atari_lib.create_atari_environment(
-        game_name, sticky_actions=False)
+    self._env = atari_lib.create_atari_environment(game_name, sticky_actions=False)
     self.game_name = game_name
+
+    # Check available environments
+    # print(envs.registry.all())
+
     self.full_action_set = full_action_set
 
   @property

@@ -19,7 +19,7 @@ logger.add(sys.stdout, level="INFO")
 # logger.add(sys.stdout, level="SUCCESS")
 # logger.add(sys.stdout, level="WARNING")
 
-from madt_atari_env import ATARI_NUM_ACTIONS, ATARI_NUM_REWARDS, ATARI_RETURN_RANGE
+from ALE.madt_atari_env import ATARI_NUM_ACTIONS, ATARI_NUM_REWARDS, ATARI_RETURN_RANGE
 from madt_transformer import Transformer
 from madt_utilities import image_embedding, encode_return, encode_reward, add_position_embedding, cross_entropy, accuracy, sample_from_logits, decode_return
 
@@ -69,7 +69,7 @@ class DecisionTransformer(hk.Module):
                name: Optional[Text] = None):
     super().__init__(name=name)
 
-    logger.info("__init__()")
+    logger.debug("__init__()")
 
     # Expected by the transformer model.
     if d_model % 64 != 0:
@@ -97,7 +97,7 @@ class DecisionTransformer(hk.Module):
     # Embed only prefix_frames first observations.
     # obs are [B x T x W x H x C].
 
-    logger.info("_embed_inputs()")
+    logger.debug("_embed_inputs()")
     obs_emb = image_embedding(
         obs,
         self.d_model,
@@ -121,7 +121,7 @@ class DecisionTransformer(hk.Module):
 
   def __call__(self, inputs: Mapping[str, jnp.array],
                is_training: bool) -> Mapping[str, jnp.array]:
-    logger.info("__call__()")
+    logger.debug("__call__()")
     """Process sequence."""
     num_batch = inputs['actions'].shape[0]
     num_steps = inputs['actions'].shape[1]
@@ -226,7 +226,7 @@ class DecisionTransformer(hk.Module):
 
   def _objective_pairs(self, inputs: Mapping[str, jnp.ndarray],
                        model_outputs: Mapping[str, jnp.ndarray]) -> jnp.ndarray:
-    logger.info("_objective_pairs()")
+    logger.debug("_objective_pairs()")
     """Get logit-target pairs for the model objective terms."""
     act_target = inputs['actions']
     ret_target = encode_return(inputs['returns-to-go'], self.return_range)
@@ -244,7 +244,7 @@ class DecisionTransformer(hk.Module):
 
   def sequence_loss(self, inputs: Mapping[str, jnp.ndarray],
                     model_outputs: Mapping[str, jnp.ndarray]) -> jnp.ndarray:
-    logger.info("sequence_loss()")
+    logger.debug("sequence_loss()")
     """Compute the loss on data wrt model outputs."""
     obj_pairs = self._objective_pairs(inputs, model_outputs)
     obj = [cross_entropy(logits, target) for logits, target in obj_pairs]
@@ -253,7 +253,7 @@ class DecisionTransformer(hk.Module):
   def sequence_accuracy(
       self, inputs: Mapping[str, jnp.ndarray],
       model_outputs: Mapping[str, jnp.ndarray]) -> jnp.ndarray:
-    logger.info("sequence_accuracy()")
+    logger.debug("sequence_accuracy()")
     """Compute the accuracy on data wrt model outputs."""
     obj_pairs = self._objective_pairs(inputs, model_outputs)
     obj = [accuracy(logits, target) for logits, target in obj_pairs]
@@ -271,9 +271,13 @@ class DecisionTransformer(hk.Module):
                      return_temperature: Optional[float] = 1.0,
                      action_top_percentile: Optional[float] = None,
                      return_top_percentile: Optional[float] = None):
-    logger.info("optimal_action()")
     """Calculate optimal action for the given sequence model."""
     obs, act, rew = inputs['observations'], inputs['actions'], inputs['rewards']
+
+    logger.info("optimal_action()")
+    logger.info(f"len(obs.shape): {len(obs.shape)}")
+    logger.info(f"len(act.shape): {len(act.shape)}")
+
     assert len(obs.shape) == 5
     assert len(act.shape) == 2
     inputs = {
@@ -338,10 +342,10 @@ class DecisionTransformer(hk.Module):
 
 # @title Build model function
 
-from madt_atari_env import ATARI_OBSERVATION_SHAPE
+from ALE.madt_atari_env import ATARI_OBSERVATION_SHAPE
 
 def model_fn(datapoint, is_training=False):
-  logger.info("model_fn()")
+  logger.debug("model_fn()")
   model = DecisionTransformer(num_actions = ATARI_NUM_ACTIONS,
                num_rewards = ATARI_NUM_REWARDS,
                return_range = ATARI_RETURN_RANGE,
@@ -357,7 +361,7 @@ model_fn = hk.transform_with_state(model_fn)
 
 @jax.jit
 def optimal_action(rng, inputs):
-  logger.info("optimal_action()")
+  logger.debug("optimal_action()")
   logits_fn = lambda rng, inputs: model_fn.apply(
         model_params, model_state, rng, inputs, is_training=False)[0]
 
@@ -377,7 +381,7 @@ def optimal_action(rng, inputs):
      
 
 # @title Test model function
-logger.info("Test model function... ")
+logger.debug("Test model function... ")
 rng = jax.random.PRNGKey(0)
 
 batch_size = 2

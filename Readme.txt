@@ -12,4 +12,5 @@ condo info
 
 source madt.sh
 
-python3 -m main
+python3 -m main_atari
+python3 -m main_gym
