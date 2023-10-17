@@ -38,7 +38,7 @@ import haiku as hk
 import optax
 
 from loguru import logger
-from Gymnasium.env_wrappers_gym import build_env_fn, _batch_rollout_gym
+from gym.env_wrappers_gym import build_env_fn, _batch_rollout_gym
 from madt_model_functions import optimal_action
 
 # @title Load model checkpoint - Moved to madt_model_functions.py
