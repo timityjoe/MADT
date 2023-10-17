@@ -15,19 +15,10 @@
 
 #@title Imports
 from typing import Any, Callable, Mapping, Optional, Text, Tuple, Union
-# import functools
-# import collections
-# import getpass
 import jax
-# import jax.numpy as jnp
-# from jax import tree_util
 import numpy as np
-# import scipy.linalg
-# from typing import Generator, Mapping, Sequence, Text
 import tensorflow.compat.v2 as tf
 import tensorflow_datasets as tfds
-# import time
-# import gym
 import matplotlib.pyplot as plt
 
 # import pickle
@@ -53,7 +44,7 @@ import haiku as hk
 import optax
 
 from loguru import logger
-from ALE.env_wrappers import build_env_fn, _batch_rollout
+from atari.env_wrappers import build_env_fn, _batch_rollout
 from madt_model_functions import optimal_action
 
 # @title Load model checkpoint - Moved to madt_model_functions.py

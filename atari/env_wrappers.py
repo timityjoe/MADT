@@ -2,7 +2,7 @@
 
 # @title Create environment wrappers
 import numpy as np
-from Gymnasium.madt_gymnasium_env import GymEnvWrapper
+from atari.madt_atari_env import AtariEnvWrapper
 import collections
 from jax import tree_util
 
@@ -171,7 +171,7 @@ def build_env_fn(game_name):
   """Returns env constructor fn."""
 
   def env_fn():
-    env = GymEnvWrapper(game_name)
+    env = AtariEnvWrapper(game_name)
     env = SequenceEnvironmentWrapper(env, 4)
     return env
 
@@ -182,13 +182,13 @@ def build_env_fn(game_name):
 
 
 # You can add your own logic and any other collection code here.
-import time
-def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_interval=None):
-  logger.info("_batch_rollout_gym()")
+def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
+  logger.info("_batch_rollout_atari()")
 
   
   """Roll out a batch of environments under a given policy function."""
-  # observations are dictionaries. Merge into single dictionary with batched observations.
+  # observations are dictionaries. Merge into single dictionary with batched
+  # observations.
   obs_list = [env.reset() for env in envs]
   num_batch = len(envs)
   obs = tree_util.tree_map(lambda *arr: np.stack(arr, axis=0), *obs_list)
@@ -201,15 +201,11 @@ def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_inte
     # Collect observations
     frames.append(
         np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=1))
-        # np.concatenate([o['observations'][-1, ...] for o in obs_list], axis=0))
     done_prev = done
 
     actions, rng = policy_fn(rng, obs)
 
     # Collect step results and stack as a batch.
-    time.sleep(1) # Sleep 1 second
-
-    [env.render() for env in envs]
     step_results = [env.step(act) for env, act in zip(envs, actions)]
     obs_list = [result[0] for result in step_results]
     obs = tree_util.tree_map(lambda *arr: np.stack(arr, axis=0), *obs_list)
