@@ -20,14 +20,6 @@ import numpy as np
 import tensorflow.compat.v2 as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
-
-# import pickle
-
-# @title Install necessary packages.
-# !pip install -U dopamine-rl
-# !pip install --upgrade gym
-# !pip install gym[atari,accept-rom-license]
-
 from dopamine.discrete_domains import atari_lib
 
 # 'TPU_DRIVER_MODE' in globals()
@@ -46,39 +38,130 @@ import optax
 from loguru import logger
 from atari.env_wrappers import build_env_fn, _batch_rollout
 from madt_model_functions import optimal_action
-
-# @title Load model checkpoint - Moved to madt_model_functions.py
-# See 
-# https://offline-rl.github.io/
-# Follow steps for gsutil installation, then
-#       gsutil -m cp -R gs://atari-replay-datasets/dqn ./
-#       gsutil -m cp -R gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl ./
-# file_path = 'gs://rl-infra-public/multi_game_dt/checkpoint_38274228.pkl'
-# print('loading checkpoint from:', file_path)
-# with tf.io.gfile.GFile(file_path, 'rb') as f:
-#   model_params, model_state = pickle.load(f)
-
-# model_param_count = sum(x.size for x in jax.tree_util.tree_leaves(model_params))
-# print('Number of model parameters: %.2e' % model_param_count)
+from atari.madt_atari_env2 import atari_env
 
 
+# -----------------------------------------------------------------------------
+def build_env_fn2(game_name):
+  logger.info(f"build_env_fn() game_name:{game_name}")
+  """Returns env constructor fn."""
 
+  def env_fn2():
+    logger.info("env_fn2()")
+    # Mod by Tim:
+    env = atari_env("{}".format(args.env), env_conf, args)
+    env = SequenceEnvironmentWrapper(env, 4)
+    return env
+
+  return env_fn
+
+
+
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
     logger.info("Main() - Start")
+    ptitle('Mask A3C Eval')
+    # parser = argparse.ArgumentParser(description='Mask-A3C_EVAL')
+    # parser.add_argument(
+    #     '--convlstm',
+    #     action='store_true',
+    #     help='Using convLSTM')
+    # parser.add_argument(
+    #     '--mask_double',
+    #     action='store_true',
+    #     help='Using mask a3c double')
+    # parser.add_argument(
+    #     '--mask_single_p',
+    #     action='store_true',
+    #     help='Using mask a3c single policy')
+    # parser.add_argument(
+    #     '--mask_single_v',
+    #     action='store_true',
+    #     help='Using mask a3c single value')
+    # parser.add_argument(
+    #     '--image',
+    #     action='store_true',
+    #     help='Using save image')
+    # parser.add_argument(
+    #     '--env',
+    #     default='PongNoFrameskip-v4',
+    #     metavar='ENV',
+    #     help='environment to train on (default: PongNoFrameskip-v4)')
+    # parser.add_argument(
+    #     '--env-config',
+    #     default='config.json',
+    #     metavar='EC',
+    #     help='environment to crop and resize info (default: config.json)')
+    # parser.add_argument(
+    #     '--num-episodes',
+    #     type=int,
+    #     default=100,
+    #     metavar='NE',
+    #     help='how many episodes in evaluation (default: 100)')
+    # parser.add_argument(
+    #     '--load-model-dir',
+    #     default='trained_models/',
+    #     metavar='LMD',
+    #     help='folder to load trained models from')
+    # parser.add_argument(
+    #     '--load-model',
+    #     default='BreakoutNoFrameskip-v4',
+    #     metavar='LMN',
+    #     help='name to load trained models from')
+    # parser.add_argument(
+    #     '--log-dir', default='logs/', metavar='LG', help='folder to save logs')
+    # parser.add_argument(
+    #     '--render',
+    #     action='store_true',
+    #     help='Watch game as it being played')
+    # parser.add_argument(
+    #     '--max-episode-length',
+    #     type=int,
+    #     default=10000,
+    #     metavar='M',
+    #     help='maximum length of an episode (default: 100000)')
+    # parser.add_argument(
+    #     '--gpu-ids',
+    #     type=int,
+    #     default=-1,
+    #     help='GPU to use [-1 CPU only] (default: -1)')
+    # parser.add_argument(
+    #     '--skip-rate',
+    #     type=int,
+    #     default=4,
+    #     metavar='SR',
+    #     help='frame skip rate (default: 4)')
+    # parser.add_argument(
+    #     '--seed',
+    #     type=int,
+    #     default=1,
+    #     metavar='S',
+    #     help='random seed (default: 1)')
+
+    # args = parser.parse_args()
+    # print(args.load_model)
+    # print(args)
+
 
     # Select the first game from evaluation config. Feel free to change.
-    # game_name = 'Breakout'  # @param
-    game_name = 'Asterix'
+    game_name = 'Breakout'  
+    # game_name = 'Asterix'
     # num_envs = 16  # @param
     num_envs = 1  # @param
-    env_fn = build_env_fn(game_name)
+    
+    # Mod by Tim:
+    # env_fn = build_env_fn(game_name)
+    env_fn = build_env_fn2(game_name)
+
+
     # Create a batch of environments to evaluate.
     env_batch = [env_fn() for i in range(num_envs)]
 
     rng = jax.random.PRNGKey(0)
     # NOTE: the evaluation num_steps is shorter than what is used for paper experiments for speed.
     # rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5000, log_interval=10)
-    rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5, log_interval=1)
+    rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=500, log_interval=1)
+    # rew_sum, frames, rng = _batch_rollout(rng, env_batch, optimal_action, num_steps=5, log_interval=1)
 
     print('scores:', rew_sum, 'average score:', np.mean(rew_sum))
 

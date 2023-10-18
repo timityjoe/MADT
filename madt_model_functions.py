@@ -19,7 +19,7 @@ logger.add(sys.stdout, level="INFO")
 # logger.add(sys.stdout, level="SUCCESS")
 # logger.add(sys.stdout, level="WARNING")
 
-from ALE.madt_atari_env import ATARI_NUM_ACTIONS, ATARI_NUM_REWARDS, ATARI_RETURN_RANGE
+from atari.madt_atari_env import ATARI_NUM_ACTIONS, ATARI_NUM_REWARDS, ATARI_RETURN_RANGE
 from madt_transformer import Transformer
 from madt_utilities import image_embedding, encode_return, encode_reward, add_position_embedding, cross_entropy, accuracy, sample_from_logits, decode_return
 
@@ -342,7 +342,7 @@ class DecisionTransformer(hk.Module):
 
 # @title Build model function
 
-from ALE.madt_atari_env import ATARI_OBSERVATION_SHAPE
+from atari.madt_atari_env import ATARI_OBSERVATION_SHAPE
 
 def model_fn(datapoint, is_training=False):
   logger.debug("model_fn()")

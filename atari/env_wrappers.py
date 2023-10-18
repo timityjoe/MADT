@@ -2,7 +2,9 @@
 
 # @title Create environment wrappers
 import numpy as np
+
 from atari.madt_atari_env import AtariEnvWrapper
+
 import collections
 from jax import tree_util
 
@@ -167,10 +169,11 @@ class SequenceEnvironmentWrapper(WrappedGymEnv):
       window_return -= r
 
 def build_env_fn(game_name):
-  logger.info("build_env_fn()")
+  logger.info(f"build_env_fn() game_name:{game_name}")
   """Returns env constructor fn."""
 
   def env_fn():
+    logger.info("env_fn()")
     env = AtariEnvWrapper(game_name)
     env = SequenceEnvironmentWrapper(env, 4)
     return env

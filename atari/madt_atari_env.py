@@ -293,8 +293,8 @@ FULL_ACTION_TO_LIMITED_ACTION = {
 
 
 def _process_observation(obs):
-  logger.info(np.size(obs))
-  logger.info(obs)
+#   logger.info(np.size(obs))
+#   logger.info(obs)
   """Process observation."""
   # Apply jpeg auto-encoding to better match observations in the dataset.
   return tf.io.decode_jpeg(tf.io.encode_jpeg(obs)).numpy()
@@ -305,8 +305,34 @@ class AtariEnvWrapper():
 
   def __init__(self, game_name: str, full_action_set: Optional[bool] = True):
     logger.debug("__init__()")
+    # --------------------------------------------------------------------------------------------------------------------
+    # Mod by Tim: Modified /anaconda3/envs/conda39-madt/lib/python3.9/site-packages/dopamine/discrete_domains/atari_lib.py L98
+    # gym.make():
+    # /anaconda3/envs/conda39-madt/lib/python3.9/site-packages/gym/envs/registration.py
+    # From:
+    # env = gym.make(full_game_name)
+    # To:
+    # env = gym.make(
+    #     full_game_name
+    #     obs_type="grayscale",  # "ram", "rgb", or "grayscale".
+    #     frameskip=1,  # Action repeats. Done in wrapper b/c of noops.
+    #     repeat_action_probability=0.25 if sticky_actions else 0.0,  # Sticky actions.
+    #     max_episode_steps=108000 // 4,
+    #     full_action_space=True,  # Use all actions.
+    #     # Mod by Tim: For rendering purposes
+    #     # render_mode=None,  # None, "human", or "rgb_array".
+    #     render_mode='human',  # None, "human", or "rgb_array".
+    #     # render_mode='rgb_array',  # None, "human", or "rgb_array".
+    # )    
+    # 
+    # env = AtariPreprocessing(env, screen_size=84)
+    # --------------------------------------------------------------------------------------------------------------------
+
     # Disable randomized sticky actions to reduce variance in evaluation.
     self._env = atari_lib.create_atari_environment(game_name, sticky_actions=False)
+
+
+
     self.game_name = game_name
 
     # Check available environments
