@@ -12,5 +12,10 @@ condo info
 
 source madt.sh
 
+## Pull additional repos
+vcs import < madt_repos.txt
+
 python3 -m main_atari
 python3 -m main_gym
+
+python3 -m main_atari --convlstm --mask_double --env BreakoutNoFrameskip-v4 --load-model BreakoutNoFrameskip-v4_Mask-A3C-double+ConvLSTM_best --num-episodes 100 --gpu-ids 0 --render

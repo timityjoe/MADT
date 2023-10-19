@@ -14,6 +14,7 @@
 # https://github.com/google-research/google-research/tree/master/multi_game_dt
 
 #@title Imports
+from __future__ import division
 from typing import Any, Callable, Mapping, Optional, Text, Tuple, Union
 import jax
 import numpy as np
@@ -22,27 +23,24 @@ import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 from dopamine.discrete_domains import atari_lib
 
-# 'TPU_DRIVER_MODE' in globals()
-# TPU_DRIVER_MODE = 1
 
-# get the latest JAX and jaxlib
-# !pip install --upgrade -q jax jaxlib
+from setproctitle import setproctitle as ptitle
+import argparse
+import json
 
-# import jax.tools.colab_tpu
-# jax.tools.colab_tpu.setup_tpu()
-
-# !pip install -U dm-haiku
 import haiku as hk
 import optax
 
 from loguru import logger
-from atari.env_wrappers import build_env_fn, _batch_rollout
+from atari.env_wrappers_atari import build_env_fn, _batch_rollout, SequenceEnvironmentWrapper
 from madt_model_functions import optimal_action
-from atari.madt_atari_env2 import atari_env
+
+from atari.madt_atari_env2 import atari_env, _batch_rollout2
 
 
-# -----------------------------------------------------------------------------
-def build_env_fn2(game_name):
+# ---------------------------------------------------------
+# Previously from /atari/env_wrappers.py
+def build_env_fn2(game_name, env_conf, args):
   logger.info(f"build_env_fn() game_name:{game_name}")
   """Returns env constructor fn."""
 
@@ -50,98 +48,108 @@ def build_env_fn2(game_name):
     logger.info("env_fn2()")
     # Mod by Tim:
     env = atari_env("{}".format(args.env), env_conf, args)
-    env = SequenceEnvironmentWrapper(env, 4)
+    # env = SequenceEnvironmentWrapper(env, 4)
     return env
 
-  return env_fn
+  return env_fn2
 
-
+# ---------------------------------------------------------
+def read_config(file_path):
+    """Read JSON config."""
+    json_object = json.load(open(file_path, 'r'))
+    return json_object
 
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
     logger.info("Main() - Start")
     ptitle('Mask A3C Eval')
-    # parser = argparse.ArgumentParser(description='Mask-A3C_EVAL')
-    # parser.add_argument(
-    #     '--convlstm',
-    #     action='store_true',
-    #     help='Using convLSTM')
-    # parser.add_argument(
-    #     '--mask_double',
-    #     action='store_true',
-    #     help='Using mask a3c double')
-    # parser.add_argument(
-    #     '--mask_single_p',
-    #     action='store_true',
-    #     help='Using mask a3c single policy')
-    # parser.add_argument(
-    #     '--mask_single_v',
-    #     action='store_true',
-    #     help='Using mask a3c single value')
-    # parser.add_argument(
-    #     '--image',
-    #     action='store_true',
-    #     help='Using save image')
-    # parser.add_argument(
-    #     '--env',
-    #     default='PongNoFrameskip-v4',
-    #     metavar='ENV',
-    #     help='environment to train on (default: PongNoFrameskip-v4)')
-    # parser.add_argument(
-    #     '--env-config',
-    #     default='config.json',
-    #     metavar='EC',
-    #     help='environment to crop and resize info (default: config.json)')
-    # parser.add_argument(
-    #     '--num-episodes',
-    #     type=int,
-    #     default=100,
-    #     metavar='NE',
-    #     help='how many episodes in evaluation (default: 100)')
-    # parser.add_argument(
-    #     '--load-model-dir',
-    #     default='trained_models/',
-    #     metavar='LMD',
-    #     help='folder to load trained models from')
-    # parser.add_argument(
-    #     '--load-model',
-    #     default='BreakoutNoFrameskip-v4',
-    #     metavar='LMN',
-    #     help='name to load trained models from')
-    # parser.add_argument(
-    #     '--log-dir', default='logs/', metavar='LG', help='folder to save logs')
-    # parser.add_argument(
-    #     '--render',
-    #     action='store_true',
-    #     help='Watch game as it being played')
-    # parser.add_argument(
-    #     '--max-episode-length',
-    #     type=int,
-    #     default=10000,
-    #     metavar='M',
-    #     help='maximum length of an episode (default: 100000)')
-    # parser.add_argument(
-    #     '--gpu-ids',
-    #     type=int,
-    #     default=-1,
-    #     help='GPU to use [-1 CPU only] (default: -1)')
-    # parser.add_argument(
-    #     '--skip-rate',
-    #     type=int,
-    #     default=4,
-    #     metavar='SR',
-    #     help='frame skip rate (default: 4)')
-    # parser.add_argument(
-    #     '--seed',
-    #     type=int,
-    #     default=1,
-    #     metavar='S',
-    #     help='random seed (default: 1)')
+    parser = argparse.ArgumentParser(description='Mask-A3C_EVAL')
 
-    # args = parser.parse_args()
-    # print(args.load_model)
-    # print(args)
+    parser.add_argument(
+        '--convlstm',
+        action='store_true',
+        help='Using convLSTM')
+    parser.add_argument(
+        '--mask_double',
+        action='store_true',
+        help='Using mask a3c double')
+    parser.add_argument(
+        '--mask_single_p',
+        action='store_true',
+        help='Using mask a3c single policy')
+    parser.add_argument(
+        '--mask_single_v',
+        action='store_true',
+        help='Using mask a3c single value')
+    parser.add_argument(
+        '--image',
+        action='store_true',
+        help='Using save image')
+    parser.add_argument(
+        '--env',
+        default='PongNoFrameskip-v4',
+        metavar='ENV',
+        help='environment to train on (default: PongNoFrameskip-v4)')
+    parser.add_argument(
+        '--env-config',
+        default='config.json',
+        metavar='EC',
+        help='environment to crop and resize info (default: config.json)')
+    parser.add_argument(
+        '--num-episodes',
+        type=int,
+        default=100,
+        metavar='NE',
+        help='how many episodes in evaluation (default: 100)')
+    parser.add_argument(
+        '--load-model-dir',
+        default='trained_models/',
+        metavar='LMD',
+        help='folder to load trained models from')
+    parser.add_argument(
+        '--load-model',
+        default='BreakoutNoFrameskip-v4',
+        metavar='LMN',
+        help='name to load trained models from')
+    parser.add_argument(
+        '--log-dir', default='logs/', metavar='LG', help='folder to save logs')
+    parser.add_argument(
+        '--render',
+        action='store_true',
+        help='Watch game as it being played')
+    parser.add_argument(
+        '--max-episode-length',
+        type=int,
+        default=10000,
+        metavar='M',
+        help='maximum length of an episode (default: 100000)')
+    parser.add_argument(
+        '--gpu-ids',
+        type=int,
+        default=-1,
+        help='GPU to use [-1 CPU only] (default: -1)')
+    parser.add_argument(
+        '--skip-rate',
+        type=int,
+        default=4,
+        metavar='SR',
+        help='frame skip rate (default: 4)')
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=1,
+        metavar='S',
+        help='random seed (default: 1)')
 
+    args = parser.parse_args()
+    print(args.load_model)
+    print(args)
+
+    setup_json = read_config(args.env_config)
+    env_conf = setup_json["Default"]
+    for i in setup_json.keys():
+        if i in args.env:
+            env_conf = setup_json[i]
 
     # Select the first game from evaluation config. Feel free to change.
     game_name = 'Breakout'  
@@ -150,8 +158,8 @@ if __name__ == "__main__":
     num_envs = 1  # @param
     
     # Mod by Tim:
-    # env_fn = build_env_fn(game_name)
-    env_fn = build_env_fn2(game_name)
+    env_fn = build_env_fn(game_name)
+    # env_fn = build_env_fn2(game_name, env_conf, args)
 
 
     # Create a batch of environments to evaluate.
