@@ -32,7 +32,7 @@ class WrappedGymEnv:
     return getattr(self._env, name)
 
 # Mod by Tim:
-class SequenceEnvironmentWrapper(WrappedGymEnv):
+class SequenceEnvironmentWrapper(gym.Wrapper):
 # class SequenceEnvironmentWrapper(Env):
   """Environment wrapper for supporting sequential model inference.
   """
