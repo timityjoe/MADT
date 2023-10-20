@@ -196,7 +196,11 @@ def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_inte
   done = np.zeros(num_batch, dtype=np.int32)
   rew_sum = np.zeros(num_batch, dtype=np.float32)
   frames = []
-  for t in tqdm(range(num_steps)):
+
+  pbar = tqdm(range(num_steps))
+
+  # for t in tqdm(range(num_steps)):
+  for t in pbar:
 
     # Collect observations
     frames.append(
@@ -207,9 +211,9 @@ def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_inte
     actions, rng = policy_fn(rng, obs)
 
     # Collect step results and stack as a batch.
-    time.sleep(1) # Sleep 1 second
+    time.sleep(0.01) # Sleep 1 second
+    # [env.render() for env in envs]
 
-    [env.render() for env in envs]
     step_results = [env.step(act) for env, act in zip(envs, actions)]
     obs_list = [result[0] for result in step_results]
     obs = tree_util.tree_map(lambda *arr: np.stack(arr, axis=0), *obs_list)
@@ -220,8 +224,11 @@ def _batch_rollout_gym(rng, envs, policy_fn, game_name, num_steps=2500, log_inte
     rew = rew * (1 - done)
     rew_sum += rew
 
-    if log_interval and t % log_interval == 0:
-      print('step: %d done: %s reward: %s' % (t, done, rew_sum))
+    # report progress
+    # if log_interval and t % log_interval == 0:
+      # print('Gym step: %d done: %s reward: %s' % (t, done, rew_sum))
+  
+    pbar.set_description(f"Gym: step {t} : done {done}. reward{rew_sum}")
 
     # Don't continue if all environments are done.
     if np.all(done):

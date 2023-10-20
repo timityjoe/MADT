@@ -1,0 +1,5 @@
+repositories:
+  atari/dopamine:
+    type: git
+    url: https://github.com/google/dopamine
+    version: master

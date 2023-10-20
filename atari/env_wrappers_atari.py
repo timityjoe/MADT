@@ -19,16 +19,21 @@ logger.add(sys.stdout, level="INFO")
 
 from tqdm import tqdm
 
+import matplotlib.pyplot as plt
+from IPython import display
+from gym import Env
+
 
 class WrappedGymEnv:
-
   def __getattr__(self, name):
     """Wrappers forward non-overridden method calls to their wrapped env."""
     if name.startswith('__'):
       raise AttributeError(name)
     return getattr(self._env, name)
 
+# Mod by Tim:
 class SequenceEnvironmentWrapper(WrappedGymEnv):
+# class SequenceEnvironmentWrapper(Env):
   """Environment wrapper for supporting sequential model inference.
   """
 
@@ -168,22 +173,26 @@ class SequenceEnvironmentWrapper(WrappedGymEnv):
       self.goal_stack.append(window_return)
       window_return -= r
 
+
+
+
+
+
 def build_env_fn(game_name):
   logger.info(f"build_env_fn() game_name:{game_name}")
   """Returns env constructor fn."""
 
   def env_fn():
-    logger.info("env_fn()")
     env = AtariEnvWrapper(game_name)
+    logger.info(f"env_fn() type(env):{type(env)}")
     env = SequenceEnvironmentWrapper(env, 4)
+    logger.info(f"env_fn() type(env):{type(env)}")
     return env
 
   return env_fn
      
 
 # @title Environment rollout
-
-
 # You can add your own logic and any other collection code here.
 def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
   logger.info("_batch_rollout_atari()")
@@ -199,7 +208,11 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
   done = np.zeros(num_batch, dtype=np.int32)
   rew_sum = np.zeros(num_batch, dtype=np.float32)
   frames = []
-  for t in tqdm(range(num_steps)):
+
+  pbar = tqdm(range(num_steps))
+  
+  # for t in tqdm(range(num_steps)):
+  for t in pbar:
 
     # Collect observations
     frames.append(
@@ -207,6 +220,14 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
     done_prev = done
 
     actions, rng = policy_fn(rng, obs)
+
+    # Mod by Tim: Render env; type SequenceEnvironmentWrapper
+    # [print(f"type(env):{type(env)}") for env in envs]
+    # [env.render(mode='human') for env in envs]
+    for env in envs:
+      plt.imshow(env.render(mode='rgb_array'))
+      plt.title("%s | Step: %d %s" % (env._spec.id,step, info))
+      plt.axis('off')
 
     # Collect step results and stack as a batch.
     step_results = [env.step(act) for env, act in zip(envs, actions)]
@@ -219,11 +240,18 @@ def _batch_rollout(rng, envs, policy_fn, num_steps=2500, log_interval=None):
     rew = rew * (1 - done)
     rew_sum += rew
 
-    if log_interval and t % log_interval == 0:
-      print('step: %d done: %s reward: %s' % (t, done, rew_sum))
+    # report progress
+    # if log_interval and t % log_interval == 0:
+      # print('Gym step: %d done: %s reward: %s' % (t, done, rew_sum))
+  
+    pbar.set_description(f"Atari: step {t} : done {done}. reward{rew_sum}")
 
     # Don't continue if all environments are done.
     if np.all(done):
       logger.info("np.all(done)..!")
+
+      # Mod by Tim:
+      display.clear_output(wait=True)
+      display.display(plt.gcf())
       break
   return rew_sum, frames, rng

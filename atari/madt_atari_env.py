@@ -8,6 +8,7 @@ from dopamine.discrete_domains import atari_lib
 import tensorflow.compat.v2 as tf
 
 from loguru import logger
+from gym import Env
 
 GAME_NAMES = [
     'AirRaid', 'Alien', 'Amidar', 'Assault', 'Asterix', 'Asteroids', 'Atlantis',
@@ -300,7 +301,9 @@ def _process_observation(obs):
   return tf.io.decode_jpeg(tf.io.encode_jpeg(obs)).numpy()
 
 
-class AtariEnvWrapper():
+# Mod by Tim:
+# class AtariEnvWrapper()
+class AtariEnvWrapper(Env):
   """Environment wrapper with a unified API."""
 
   def __init__(self, game_name: str, full_action_set: Optional[bool] = True):
@@ -311,33 +314,22 @@ class AtariEnvWrapper():
     # /anaconda3/envs/conda39-madt/lib/python3.9/site-packages/gym/envs/registration.py
     # From:
     # env = gym.make(full_game_name)
+    # env = AtariPreprocessing(env)
+    #
     # To:
-    # env = gym.make(
-    #     full_game_name
-    #     obs_type="grayscale",  # "ram", "rgb", or "grayscale".
-    #     frameskip=1,  # Action repeats. Done in wrapper b/c of noops.
-    #     repeat_action_probability=0.25 if sticky_actions else 0.0,  # Sticky actions.
-    #     max_episode_steps=108000 // 4,
-    #     full_action_space=True,  # Use all actions.
-    #     # Mod by Tim: For rendering purposes
-    #     # render_mode=None,  # None, "human", or "rgb_array".
-    #     render_mode='human',  # None, "human", or "rgb_array".
-    #     # render_mode='rgb_array',  # None, "human", or "rgb_array".
-    # )    
+    # env = gym.make(full_game_name, render_mode='human')  
+    # env = gym.make(full_game_name, render_mode='human')  
+    # screen_size=84
+    # env = AtariPreprocessing(env, screen_size)
     # 
-    # env = AtariPreprocessing(env, screen_size=84)
     # --------------------------------------------------------------------------------------------------------------------
 
     # Disable randomized sticky actions to reduce variance in evaluation.
     self._env = atari_lib.create_atari_environment(game_name, sticky_actions=False)
-
-
-
     self.game_name = game_name
 
     # Check available environments
     # print(envs.registry.all())
-
     self.full_action_set = full_action_set
 
   @property
@@ -363,4 +355,6 @@ class AtariEnvWrapper():
     obs = _process_observation(obs)
     return obs, rew, done, info
      
-
+# Mod by Tim:
+  def render(self, mode='human', **kwargs):
+    return self._env.render(mode, **kwargs)
